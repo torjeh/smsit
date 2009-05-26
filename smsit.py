@@ -2,19 +2,15 @@
 Check for hosts that are down.
 Report by sending SMS
 
-
-*) This program needs to run as root!
-*) 
-
-
 TODO: 
+T) Deamon
+T) Service
+T) Config
+T) Signal-handling
+T) SMS-script
 T) Make python 3.x compatible
 T) Multithreaded? :)
-T) Deamon
-T) Config
-T) Service
-T) SMS-script
-
+T) Support more than ping?
 
 Torje S. Henriksen
 torje.starbo.henriksen@telemed.no
@@ -33,8 +29,12 @@ a configuration file (e.g. /etc/smsit.conf
 """
 
 # List of hosts that should be checked
-hosts = {"10.0.1.4":0, "127.0.0.1":0, "10.0.1.23":0}
 
+hosts = {\
+"10.0.1.4":0,\
+"127.0.0.1":0,\
+"172.21.14.130":0\
+}
 # Phone number(s) (string or int, I don't care)
 phone_no = [90912307] # Torje
 
@@ -42,12 +42,38 @@ phone_no = [90912307] # Torje
 alert_treshold = 3
 # Number of minutes between each check
 check_time = 5  # minutes
+
 # Script to run to send the SMS (yeah, kind of diirty)
 alert_sh = "./send_sms.sh"
 
+# Debug enabled?
+debug = 1
 
-""" Init: """ 
-# Build dictionary that holds the hosts, and how many checks they have been down (in a row).
+""" Init: Read the config file into memory. 
+""" 
+
+
+
+"""
+Util functions
+"""
+def print_hosts(hosts):
+    print("Hosts: "),
+    for h in hosts:
+        print(h+" "),
+
+# printout functions. Should be put into
+# a log eventually. /var/log/smsit.log (?)
+def DEBUG(s):
+    global debug
+    if debug:
+        print("[D] " +str(s))
+def INFO(s):
+    print("[I] " + str(s))
+def WARNING(s):
+    print("[W] " + str(s))
+def ERROR(s):
+    print("[E] " + str(s))
 
 
 """ Body """
@@ -70,9 +96,7 @@ def test_ping_hosts(hosts):
                 print report[int(igot[0])]
                 if int(igot[0]) == 0: hosts[h] += 1
                 else: hosts[h] = 0
-
-
-
+            #else: print "No igot ..."
 
 def host_down(hosts, alert_treshold):
     rl = [] # return value - list of hosts that are down
@@ -81,16 +105,24 @@ def host_down(hosts, alert_treshold):
             rl.append(h)
     return rl
         
+# We have at least one host that are down,
+# and we want to send an alert.
 def alert(down):
     print str(len(down)) + " hosts are down!" 
+    rv = os.system("echo \"This is where we send an SMS\"")
+    
 
-# Forever
-while (1):
+# Forever (or not)
+i=0
+while (i<3):
+    i+=1
+    print_hosts(hosts)
     test_ping_hosts(hosts)
-    down = host_down(hosts, alert_treshold) 
+    down = host_down(hosts, alert_treshold) # Check if host is really down
     if len(down) > 0: # hosts are down
         alert(down)         
-
+    else: 
+        print("No hosts are down")
 
 
     #for h in hosts:
