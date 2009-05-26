@@ -3,13 +3,9 @@ Check for hosts that are down.
 Report by sending SMS
 
 TODO: 
-T) Needs to get smarter - too much spam if host is down
 T) Deamon
 T) Service
-T) Config
 T) Signal-handling
-T) SMS-script
-T) Make python 3.x compatible
 T) Multithreaded? :)
 T) Support more than ping?
    - dhcp,dns 
@@ -26,20 +22,12 @@ import time # time.sleep()
 import sys  # ...
 import ConfigParser
 
-"""
-Configuration: this part should be moved to
-a configuration file (e.g. /etc/smsit.conf
-"""
-
-# List of hosts that should be checked
-# Dictionary to keep all the host-objects
-# Index is the ip-address of the host
-hosts = {}
 
 class host_object:
     ip_addr = ""       # ip address of host (same is index)
     hostname = ""      # hostname. Just your alias, can be anything.
     checks_failed = 0  # Number of checks failed
+    alert_sent = 0     # Has an alert been sent for this host?
 
     def __init__(self,ip,name):
         self.ip_addr=ip
@@ -57,7 +45,18 @@ class host_object:
         print("[D] Checks: " + str(self.checks_failed))
     
 
+
+"""
+Init
+"""
+
+# List of hosts that should be checked
+# Index is the ip-address of the host
+hosts = {}
+
 # Read config file
+# ConfigParser is included in python and
+# documented here http://www.python.org/doc/2.6.2/library/configparser.html
 config = ConfigParser.ConfigParser()
 config.read("smsit.conf")
 
@@ -71,12 +70,6 @@ phone_no=config.get('global','phone_numbers').split(",")
 hostlist=config.items('hosts')
 for h in hostlist:
     hosts[h[0]] = host_object(h[0],h[1])
-
-
-
-
-
-
 
 """
 Util functions
@@ -115,7 +108,7 @@ def test_ping_hosts(hosts):
     lifeline = re.compile(r"(\d) received")
     report = ("No response","Partial Response","Alive")
     for h in hosts:
-        pingaling = os.popen("ping -q -W 5 -c2 " + h, "r") # do the ping
+        pingaling = os.popen("ping -q -w 5 -c2 " + h, "r") # do the ping
         sys.stdout.flush() 
         while 1:
             line = pingaling.readline()
@@ -123,8 +116,13 @@ def test_ping_hosts(hosts):
             igot = re.findall(lifeline,line) # Parse
             if igot:
                 INFO(h + " " + report[int(igot[0])])
-                if int(igot[0]) == 0: hosts[h].checks_failed += 1
-                else: hosts[h].checks_failed = 0
+                # Host is down
+                if int(igot[0]) == 0: 
+                    hosts[h].checks_failed += 1
+                # Host is up
+                else: 
+                    hosts[h].checks_failed = 0
+                    hosts[h].alert_sent = 0
             #else: print "No igot ..."
 
 
@@ -135,10 +133,10 @@ def test_ping_hosts(hosts):
 # The amount of time a host has been down, depends
 # on the alert_treshold and the time between each check 'check_time'
 def host_down(hosts, alert_treshold):
-    rl = [] # return value - list of hosts that are down
+    rl = {} # return value - list of hosts that are down
     for h in hosts:
         if hosts[h].checks_failed >= alert_treshold:
-            rl.append(hosts[h].hostname)
+            rl[h] = hosts[h]
     return rl
       
 # We have at least one host that is down,
@@ -155,9 +153,9 @@ def alert(down):
 
     # Append the list of names that are down 
     for d in down:
-        down_str+=d+"\n"
+        down_str+=down[d].hostname+"\n"
 
-    INFO("Alert sent. Length: "+str(len(down_str)))
+    INFO("Sending alert. Length: "+str(len(down_str)))
     send_sms(down_str,phone_no)
 
 
@@ -174,15 +172,20 @@ def send_sms(msg, phone_numbers):
 
 # Forever (or not)
 print_hosts(hosts)
-i=0
-while (i<alert_treshold):
-    i+=1
+while 1:
     test_ping_hosts(hosts)
     down = host_down(hosts, alert_treshold) # Check what hosts are down
     if len(down) > 0: # hosts are down
-        alert(down)         
+        # Check if there are any host in the down-list that hasn't sent an alert
+        for d in down:
+            if down[d].alert_sent == 0:
+                down[d].alert_sent = 1
+                alert(down)         
+            else:
+                INFO("Alert already sent for " + down[d].hostname)
     else: 
-        INFO("No hosts are confirmed down. No need to alarm - yet")
+        INFO("No new hosts are confirmed down. No need to alarm - yet")
+        
 
     time.sleep(check_time)
 
