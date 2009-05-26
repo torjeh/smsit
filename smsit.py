@@ -11,6 +11,7 @@ T) SMS-script
 T) Make python 3.x compatible
 T) Multithreaded? :)
 T) Support more than ping?
+   - dhcp,dns 
 
 Torje S. Henriksen
 torje.starbo.henriksen@telemed.no
@@ -31,9 +32,10 @@ a configuration file (e.g. /etc/smsit.conf
 # List of hosts that should be checked
 
 hosts = {\
-"10.0.1.4":0,\
 "127.0.0.1":0,\
-"172.21.14.130":0\
+"10.0.1.4":0,\
+"172.21.14.130":0,\
+"10.0.1.5":0\
 }
 # Phone number(s) (string or int, I don't care)
 phone_no = [90912307] # Torje
@@ -61,6 +63,7 @@ def print_hosts(hosts):
     print("Hosts: "),
     for h in hosts:
         print(h+" "),
+    print("") # newline
 
 # printout functions. Should be put into
 # a log eventually. /var/log/smsit.log (?)
@@ -105,24 +108,34 @@ def host_down(hosts, alert_treshold):
             rl.append(h)
     return rl
         
-# We have at least one host that are down,
+# We have at least one host that is down,
 # and we want to send an alert.
 def alert(down):
     print str(len(down)) + " hosts are down!" 
     rv = os.system("echo \"This is where we send an SMS\"")
-    
+    down_str="These hosts are down:\n"
+    for d in down:
+        down_str+=str(d)+"\n"
+
+    INFO("Alert sent. Length: "+str(len(down_str)))
+    send_sms(down_str)
+
+def send_sms(msg):
+    if len(msg) > 150:
+        WARNING("Message too long")
+    os.system("echo \""+msg+"\" | gnokii --config /home/torjeh/.gnokiirc --sendsms 90912307")
 
 # Forever (or not)
+print_hosts(hosts)
 i=0
 while (i<3):
     i+=1
-    print_hosts(hosts)
     test_ping_hosts(hosts)
     down = host_down(hosts, alert_treshold) # Check if host is really down
     if len(down) > 0: # hosts are down
         alert(down)         
     else: 
-        print("No hosts are down")
+        INFO("No hosts are down")
 
 
     #for h in hosts:
