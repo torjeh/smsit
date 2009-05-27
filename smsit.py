@@ -3,7 +3,6 @@ Check for hosts that are down.
 Report by sending SMS
 
 TODO: 
-T) Deamon
 T) Service
 T) Signal-handling
 T) Multithreaded? :)
@@ -20,11 +19,15 @@ import os   # os.system(...)
 import re   # Regular expressions (parse ping-output)
 import time # time.sleep()
 import sys  # ...
-import ConfigParser
+import ConfigParser # Read config file
+import signal # should catch signals to die gracefully
 
+
+# File descriptor for logfile
+lf=None
 
 class host_object:
-    ip_addr = ""       # ip address of host (same is index)
+    ip_addr = ""       # ip address of host (same as index to the hosts-dictionary)
     hostname = ""      # hostname. Just your alias, can be anything.
     checks_failed = 0  # Number of checks failed
     alert_sent = 0     # Has an alert been sent for this host?
@@ -44,33 +47,6 @@ class host_object:
         print("[D] Ip:     " + self.ip_addr)
         print("[D] Checks: " + str(self.checks_failed))
     
-
-
-"""
-Init
-"""
-
-# List of hosts that should be checked
-# Index is the ip-address of the host
-hosts = {}
-
-# Read config file
-# ConfigParser is included in python and
-# documented here http://www.python.org/doc/2.6.2/library/configparser.html
-config = ConfigParser.ConfigParser()
-config.read("smsit.conf")
-
-# Get global variables
-alert_treshold = int(config.get('global','alert_treshold'))
-check_time = int(config.get('global','check_time'))
-debug = int(config.get('global','debug'))
-phone_no=config.get('global','phone_numbers').split(",")
-
-# Get hosts
-hostlist=config.items('hosts')
-for h in hostlist:
-    hosts[h[0]] = host_object(h[0],h[1])
-
 """
 Util functions
 """
@@ -86,21 +62,65 @@ def print_hosts(hosts):
 def DEBUG(s):
     global debug
     if debug:
-        print("[D] " +str(s))
+        lf.write("[D] " +str(s))
+        lf.write("\n")
+        lf.flush()
 def INFO(s):
-    print("[I] " + str(s))
+    lf.write("[I] " + str(s))
+    lf.write("\n")
+    lf.flush()
 def WARNING(s):
-    print("[W] " + str(s))
+    lf.write("[W] " + str(s))
+    lf.write("\n")
+    lf.flush()
 def ERROR(s):
-    print("[E] " + str(s))
+    lf.write("[E] " + str(s))
+    lf.write("\n")
+    lf.flush()
+
+
+
+
+"""
+Init: This is where we read the config file, and create our objects
+"""
+
+# List of hosts that should be checked
+# Index is the ip-address of the host
+hosts = {}
+
+# Read config file
+# ConfigParser is included in python and
+# documented here http://www.python.org/doc/2.6.2/library/configparser.html
+config = ConfigParser.ConfigParser()
+config.read("smsit.conf") # Hardcoded config file ... 
+    
+# Get global variables from config file
+alert_treshold = int(config.get('global','alert_treshold')) # int
+check_time = int(config.get('global','check_time')) # int
+debug = int(config.get('global','debug')) # int
+phone_no=config.get('global','phone_numbers').split(",") # Comma-separated list
+daemon=int(config.get('global','daemon')) # int
+gnokiiconfig=config.get('global','gnokiiconfig') # str
+logfile=config.get('global','logfile') # str
+pidfile=config.get('global','pidfile') # str
+
+
+# Go into daemonized form
+if daemon:
+    print("Becoming a daemon ...")
+    from daemonize import createDaemon
+    createDaemon()
+    # Open log-file (in appending mode)
+    lf=open(logfile,'a') 
+
+# Get hosts
+hostlist=config.items('hosts')
+for h in hostlist:
+    hosts[h[0]] = host_object(h[0],h[1])
 
 
 """ Body """
-
-
-    
-
-
 
 # This method is (pretty much) stolen from 
 # http://www.wellho.net/solutions/python-python-threads-a-first-example.html
@@ -139,8 +159,8 @@ def host_down(hosts, alert_treshold):
             rl[h] = hosts[h]
     return rl
       
-# We have at least one host that is down,
-# and we want to send an alert.
+# Alert is called if we have at least one host 
+# that is down, and we want to send an alert.
 # 'down' is a list of names of the hosts that are down
 def alert(down):
     WARNING(str(len(down)) + " hosts are down!") 
@@ -159,7 +179,7 @@ def alert(down):
     send_sms(down_str,phone_no)
 
 
-# This method only checks message length, and takes care that
+# send_sms takes care that
 # the message is sent to all that are supposed to get it
 def send_sms(msg, phone_numbers):
     # Check the length of the message (sms is small - like twitter!)
@@ -168,26 +188,35 @@ def send_sms(msg, phone_numbers):
 
     # Do the message pass (finally)
     for p in phone_numbers:
-        rv = os.system("echo \""+msg+"\" | gnokii --config /home/torjeh/.gnokiirc --sendsms "+str(p))
+        rv = os.system("echo \""+msg+"\" | gnokii --config " + gnokiiconfig +" --sendsms "+str(p))
 
-# Forever (or not)
-print_hosts(hosts)
+
+"""
+Loop forever (Or until CTRL-C hopefully)
+"""
 while 1:
     test_ping_hosts(hosts)
     down = host_down(hosts, alert_treshold) # Check what hosts are down
     if len(down) > 0: # hosts are down
         # Check if there are any host in the down-list that hasn't sent an alert
+        send_alert=0
         for d in down:
             if down[d].alert_sent == 0:
                 down[d].alert_sent = 1
-                alert(down)         
+                send_alert=1
             else:
                 INFO("Alert already sent for " + down[d].hostname)
+        # Only send alert if we have hosts that are down, that have not
+        # already got an alert.
+        if send_alert:
+            alert(down)         
     else: 
         INFO("No new hosts are confirmed down. No need to alarm - yet")
         
-
+    # Relax for a while
+    DEBUG("Sleeping for " + str(check_time) + " seconds.")
     time.sleep(check_time)
+
 
 
 
