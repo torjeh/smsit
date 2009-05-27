@@ -5,10 +5,10 @@ Report by sending SMS
 TODO: 
 T) Service
 T) Signal-handling
+T) Write pid to pidfile
 T) Multithreaded? :)
 T) Support more than ping?
    - dhcp,dns 
-
 Torje S. Henriksen
 torje.starbo.henriksen@telemed.no
 
@@ -17,7 +17,7 @@ torje.starbo.henriksen@telemed.no
 """ Imports """
 import os   # os.system(...)
 import re   # Regular expressions (parse ping-output)
-import time # time.sleep()
+from time import strftime, localtime, sleep, ctime
 import sys  # ...
 import ConfigParser # Read config file
 import signal # should catch signals to die gracefully
@@ -57,33 +57,47 @@ def print_hosts(hosts):
     INFO(s)
 
 
+# This function handles all incoming signals
+# (Pretty much just to shut down)
+# http://docs.python.org/library/signal.html
+def signal_handler(signum, frame):
+    INFO("Someone is shutting us down with signal: " + str(signum))
+    lf.close()
+    sys.exit()
+
+def now():
+    return str(strftime("%b %d %H:%M:%S ", localtime()))
+
 # printout functions. Should be put into
 # a log eventually. /var/log/smsit.log (?)
 def DEBUG(s):
     global debug
     if debug:
-        lf.write("[D] " +str(s))
+        lf.write(now()+"[D] " +str(s))
         lf.write("\n")
         lf.flush()
 def INFO(s):
-    lf.write("[I] " + str(s))
+    lf.write(now()+"[I] " + str(s))
     lf.write("\n")
     lf.flush()
 def WARNING(s):
-    lf.write("[W] " + str(s))
+    lf.write(now()+"[W] " + str(s))
     lf.write("\n")
     lf.flush()
 def ERROR(s):
-    lf.write("[E] " + str(s))
+    lf.write(now()+"[E] " + str(s))
     lf.write("\n")
     lf.flush()
-
 
 
 
 """
 Init: This is where we read the config file, and create our objects
 """
+
+# Register signal handler
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM,signal_handler)
 
 # List of hosts that should be checked
 # Index is the ip-address of the host
@@ -105,6 +119,10 @@ gnokiiconfig=config.get('global','gnokiiconfig') # str
 logfile=config.get('global','logfile') # str
 pidfile=config.get('global','pidfile') # str
 
+# Get hosts
+hostlist=config.items('hosts')
+for h in hostlist:
+    hosts[h[0]] = host_object(h[0],h[1])
 
 # Go into daemonized form
 if daemon:
@@ -114,11 +132,22 @@ if daemon:
     # Open log-file (in appending mode)
     lf=open(logfile,'a') 
 
-# Get hosts
-hostlist=config.items('hosts')
-for h in hostlist:
-    hosts[h[0]] = host_object(h[0],h[1])
 
+INFO("SMSit started " + ctime())
+DEBUG("##################### ")
+DEBUG("### Configuration ### ")
+DEBUG("##################### ")
+DEBUG("alert_treshold: " + str(alert_treshold))
+DEBUG("check_time:     " + str(check_time))
+DEBUG("debug:          " + str(debug))
+DEBUG("phone_no:       " + str(phone_no))
+DEBUG("daemon:         " + str(daemon))
+DEBUG("gnokiiconfig:   " + str(gnokiiconfig))
+DEBUG("logfile:        " + str(logfile))
+DEBUG("pidfile:        " + str(pidfile))
+DEBUG("workingdir:     " + str(os.getcwd())
+DEBUG("My pid:         " + str(os.getpid()))
+DEBUG("##################### ")
 
 """ Body """
 
@@ -129,7 +158,7 @@ def test_ping_hosts(hosts):
     report = ("No response","Partial Response","Alive")
     for h in hosts:
         pingaling = os.popen("ping -q -w 5 -c2 " + h, "r") # do the ping
-        sys.stdout.flush() 
+        #sys.stdout.flush() 
         while 1:
             line = pingaling.readline()
             if not line: break 
@@ -215,7 +244,7 @@ while 1:
         
     # Relax for a while
     DEBUG("Sleeping for " + str(check_time) + " seconds.")
-    time.sleep(check_time)
+    sleep(check_time)
 
 
 
