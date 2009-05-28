@@ -154,6 +154,7 @@ DEBUG("##################### ")
 # This method is (pretty much) stolen from 
 # http://www.wellho.net/solutions/python-python-threads-a-first-example.html
 def test_ping_hosts(hosts):
+    t0 = time.time()
     lifeline = re.compile(r"(\d) received")
     report = ("No response","Partial Response","Alive")
     for h in hosts:
@@ -173,6 +174,8 @@ def test_ping_hosts(hosts):
                     hosts[h].checks_failed = 0
                     hosts[h].alert_sent = 0
             #else: print "No igot ..."
+    time_taken=time.time()-t0
+    DEBUG("Spent " + str(time_taken) " pinging hosts")
 
 
 # Return a list of all hosts that are down
