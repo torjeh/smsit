@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """
 Check for hosts that are down.
 Report by sending SMS
@@ -17,10 +19,11 @@ torje.starbo.henriksen@telemed.no
 """ Imports """
 import os   # os.system(...)
 import re   # Regular expressions (parse ping-output)
-from time import strftime, localtime, sleep, ctime
-import sys  # ...
-import ConfigParser # Read config file
+from time import strftime, localtime, sleep, ctime, time
+import sys  
 import signal # should catch signals to die gracefully
+import ConfigParser # ...  import ConfigParser # Read config file
+
 
 
 # File descriptor for logfile
@@ -46,30 +49,100 @@ class host_object:
         print("[D] Name:   " + self.hostname)
         print("[D] Ip:     " + self.ip_addr)
         print("[D] Checks: " + str(self.checks_failed))
-    
+
 """
 Util functions
 """
+def createDaemon(redirect=None):
+    UMASK = 0
+    WORKDIR = "/"
+    MAXFD = 1024
+
+    if redirect:
+        REDIRECT_TO=redirect
+        # Truncate the file
+        open(redirect,"w")
+        
+    elif (hasattr(os, "devnull")):
+        REDIRECT_TO = os.devnull
+    else:
+        REDIRECT_TO = "/dev/null"
+    try:
+        pid = os.fork()
+    except OSError, e:
+        raise Exception, "%s [%d]" % (e.strerror, e.errno)
+ 
+    if (pid == 0):	# The first child.
+        os.setsid()
+        try:
+            pid = os.fork()	# Fork a second child.
+        except OSError, e:
+            raise Exception, "%s [%d]" % (e.strerror, e.errno)
+        if (pid == 0):	# The second child.
+            os.chdir(WORKDIR)
+            os.umask(UMASK)
+        else:
+            os._exit(0)	# Exit parent (the first child) of the second child.
+    else:
+        os._exit(0)	# Exit parent of the first child.
+
+    import resource		# Resource usage information.
+    maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+    if (maxfd == resource.RLIM_INFINITY):
+       maxfd = MAXFD
+    for fd in range(0, maxfd):
+       try:
+          os.close(fd)
+       except OSError:	# ERROR, fd wasn't open to begin with (ignored)
+          pass
+    os.open(REDIRECT_TO, os.O_RDWR)	# standard input (0)
+    os.dup2(0, 1)			# standard output (1)
+    os.dup2(0, 2)			# standard error (2)
+
+    return(0)
+
+
 def print_hosts(hosts):
     s="Hosts:"
     for h in hosts:
         s+=" "+h
     INFO(s)
 
+# Write the pid to the pidfile.
+# We don't care if the file exists,
+# or if there is anything in it.
+# Just giving a warning ... 
+def write_pid_to_file(pidfile):
+    # Check if we already have a pidfile
+    try: 
+        fd=open(pidfile,"ro")
+        WARNING("There is already a pid-file.")
+        fd.close()
+    except:
+        pass
+
+    # Now truncate the file and write the pid
+    fd=open(pidfile,"w")
+    fd.write(str(os.getpid()))
+    fd.close()
 
 # This function handles all incoming signals
 # (Pretty much just to shut down)
 # http://docs.python.org/library/signal.html
 def signal_handler(signum, frame):
-    INFO("Someone is shutting us down with signal: " + str(signum))
+    INFO("Got signal: " + str(signum) + ". Shutting down. Bye!") 
+    # Delete the pid-file
+
+    # Close the logger
     lf.close()
     sys.exit()
 
 def now():
     return str(strftime("%b %d %H:%M:%S ", localtime()))
 
-# printout functions. Should be put into
-# a log eventually. /var/log/smsit.log (?)
+
+# Logging functions. If we are not running as a 
+# daemon, I guess we should use print instead of write.
 def DEBUG(s):
     global debug
     if debug:
@@ -89,13 +162,13 @@ def ERROR(s):
     lf.write("\n")
     lf.flush()
 
-
-
 """
 Init: This is where we read the config file, and create our objects
 """
 
-# Register signal handler
+# Register signal handler for signals:
+# SIGTERM 15
+# SIGINT CTRL-C
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM,signal_handler)
 
@@ -115,46 +188,56 @@ check_time = int(config.get('global','check_time')) # int
 debug = int(config.get('global','debug')) # int
 phone_no=config.get('global','phone_numbers').split(",") # Comma-separated list
 daemon=int(config.get('global','daemon')) # int
-gnokiiconfig=config.get('global','gnokiiconfig') # str
+#gnokiiconfig=config.get('global','gnokiiconfig') # str
 logfile=config.get('global','logfile') # str
 pidfile=config.get('global','pidfile') # str
 
-# Get hosts
+# Get hosts from the config file
 hostlist=config.items('hosts')
 for h in hostlist:
     hosts[h[0]] = host_object(h[0],h[1])
 
 # Go into daemonized form
+# Also meas write output to a logfile
+# and write our pid to the pidfile
 if daemon:
     print("Becoming a daemon ...")
-    from daemonize import createDaemon
-    createDaemon()
+    createDaemon("/tmp/smsit.out")
     # Open log-file (in appending mode)
     lf=open(logfile,'a') 
-
-
+    # Write our pid to pid-file
+    write_pid_to_file(pidfile)  
+    DEBUG("Redirecting output to /tmp/smsit.out instead of /dev/null to simplify debugging")
+else:
+    print("Not running as a daemon ...")
+   
 INFO("SMSit started " + ctime())
-DEBUG("##################### ")
-DEBUG("### Configuration ### ")
-DEBUG("##################### ")
+
+DEBUG("=======================================================")
+DEBUG("Configuration")
+DEBUG("_______________________________________________________")
 DEBUG("alert_treshold: " + str(alert_treshold))
 DEBUG("check_time:     " + str(check_time))
 DEBUG("debug:          " + str(debug))
 DEBUG("phone_no:       " + str(phone_no))
 DEBUG("daemon:         " + str(daemon))
-DEBUG("gnokiiconfig:   " + str(gnokiiconfig))
+#DEBUG("gnokiiconfig:   " + str(gnokiiconfig))
 DEBUG("logfile:        " + str(logfile))
 DEBUG("pidfile:        " + str(pidfile))
-DEBUG("workingdir:     " + str(os.getcwd())
+DEBUG("workingdir:     " + str(os.getcwd()))
 DEBUG("My pid:         " + str(os.getpid()))
-DEBUG("##################### ")
+DEBUG("_______________________________________________________")
 
 """ Body """
 
 # This method is (pretty much) stolen from 
 # http://www.wellho.net/solutions/python-python-threads-a-first-example.html
 def test_ping_hosts(hosts):
-    t0 = time.time()
+    INFO("=======================================================")
+    INFO("ip                  alias         ")
+    INFO("_______________________________________________________")
+
+    t0 = time()
     lifeline = re.compile(r"(\d) received")
     report = ("No response","Partial Response","Alive")
     for h in hosts:
@@ -165,7 +248,10 @@ def test_ping_hosts(hosts):
             if not line: break 
             igot = re.findall(lifeline,line) # Parse
             if igot:
-                INFO(h + " " + report[int(igot[0])])
+                ipstr = h+" "*(20-len(h))
+                astr  = hosts[h].hostname+" "*(20-len(hosts[h].hostname))
+                chck_str = str(hosts[h].checks_failed) 
+                INFO(ipstr + astr + " " + report[int(igot[0])] + " " + chck_str)
                 # Host is down
                 if int(igot[0]) == 0: 
                     hosts[h].checks_failed += 1
@@ -174,9 +260,9 @@ def test_ping_hosts(hosts):
                     hosts[h].checks_failed = 0
                     hosts[h].alert_sent = 0
             #else: print "No igot ..."
-    time_taken=time.time()-t0
-    DEBUG("Spent " + str(time_taken) " pinging hosts")
-
+    time_taken=time()-t0
+    DEBUG("Spent about " + str(int(time_taken)) + " seconds pinging hosts.")
+    INFO("_______________________________________________________")
 
 # Return a list of all hosts that are down
 # (Definition of down: have not responded to 
@@ -210,24 +296,31 @@ def alert(down):
     INFO("Sending alert. Length: "+str(len(down_str)))
     send_sms(down_str,phone_no)
 
+def get_real_exit_code(rv):
+    return (rv >> 8) & 0xFF
 
 # send_sms takes care that
 # the message is sent to all that are supposed to get it
 def send_sms(msg, phone_numbers):
     # Check the length of the message (sms is small - like twitter!)
     if len(msg) > 160:
-        WARNING("Message too long")
+        WARNING("Message quite long")
 
-    # Do the message pass (finally)
+    # Do the message pass to alle phonenumbers in list
+    # example: echo "hi there" | gnokii --config /etc/gnokiirc --sendsm 12345678
     for p in phone_numbers:
-        rv = os.system("echo \""+msg+"\" | gnokii --config " + gnokiiconfig +" --sendsms "+str(p))
-
+#rv = os.system("echo \""+msg+"\" | gnokii --config " + gnokiiconfig +" --sendsms "+str(p))
+        rv = os.system("echo \""+msg+"\" | gnokii --sendsms "+str(p))
+        rv = get_real_exit_code(rv)
+        if rv:
+            WARNING("Could not send SMS: " + str(rv) + ", but don't know what to do about it.")
+        sleep(2) # sleep some, to make sure we don't overload the phone and make everything crash ... 
 
 """
 Loop forever (Or until CTRL-C hopefully)
 """
 while 1:
-    test_ping_hosts(hosts)
+    time_to_check_hosts=test_ping_hosts(hosts)
     down = host_down(hosts, alert_treshold) # Check what hosts are down
     if len(down) > 0: # hosts are down
         # Check if there are any host in the down-list that hasn't sent an alert

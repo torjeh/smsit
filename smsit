@@ -1,0 +1,55 @@
+#!/bin/sh
+#/etc/init.d/smsit
+#
+# NOTE: This script is really stupid.
+#       It is basically just ment to 
+#       start and stop SMSit whenever
+#       the computer reboots. 
+#
+# Stolen from:
+# http://www.debian-administration.org/article/Making_scripts_run_at_boot_time_with_Debian
+#
+
+### BEGIN INIT INFO
+# Provides: SMSit
+# Required-Start: $network $time $local_fs
+# Required-Stop:
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6 
+# Short-Description: Starting SMSit at boot-time, and stops it at shutdown
+### END INIT INFO
+
+PIDFILE=/var/lock/smsit.pid
+EXECUTABLE=/usr/local/bin/smsit.py
+
+case "$1" in
+    start)
+        # Check if we are already running
+        if [ -e $PIDFILE ] ; then
+            echo "SMSit already running. If you do not agree on this, please delete the pidfile: \""$PIDFILE"\", or run $0 stop to make it disappear."
+            exit 1
+        fi 
+
+        echo "Starting SMSit"
+        # Start
+        $EXECUTABLE
+
+        ;;
+    stop)
+        # Check if we have a pid file
+        if [ -e $PIDFILE ] ; then
+            echo "Stopping SMSit"
+            kill -15 `cat $PIDFILE`
+            rm -f $PIDFILE
+        else 
+            echo "Can't find the pidfile \""$PIDFILE"\", so can't stop SMSit."
+            echo "If SMSit is running, please stop it manually."
+        fi
+        ;;
+    *) 
+        echo "Usage: /etc/init.d/smsit {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0

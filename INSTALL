@@ -1,0 +1,31 @@
+# Howto install 
+# SMSit
+#
+#
+# There is an install-script in the root directory called
+# install.sh
+#
+# To execute it, run either
+# chmod 755 install.sh
+# sudo ./install.sh
+#
+# or
+#
+# sudo sh install.sh
+#
+#
+# This will install 
+# /etc/smsit.conf
+# /etc/init.d/smsit
+#
+# and make SMSit start at boot-time
+#
+#
+# The location of different files, can be changed in 
+# /etc/smsit.conf after the install.
+#
+# If you change the location of the pid-file in /etc/smsit.conf,
+# remember to also make the changes to /etc/init.d/smsit.
+#
+# If you want to change the location of the /etc/smsit.conf,
+# you will have to make the change to the source code in smsit.py
