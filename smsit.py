@@ -180,7 +180,7 @@ hosts = {}
 # ConfigParser is included in python and
 # documented here http://www.python.org/doc/2.6.2/library/configparser.html
 config = ConfigParser.ConfigParser()
-config.read("smsit.conf") # Hardcoded config file ... 
+config.read("/etc/smsit.conf") # Hardcoded config file ... 
     
 # Get global variables from config file
 alert_treshold = int(config.get('global','alert_treshold')) # int
