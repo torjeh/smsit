@@ -22,7 +22,7 @@ if [ `id -u` -ne 0 ] ; then
 fi
 
 install -v -m 755 -o root -g root smsit.py /usr/local/bin/
-install -v -m 644 -o root -g root smsit.conf /etc/
+install -v -m 644 -o root -g root smsit_default.conf /etc/smsit.conf
 install -v -m 755 -o root -g root smsit /etc/init.d/
 update-rc.d smsit defaults
 
