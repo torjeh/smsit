@@ -7,7 +7,7 @@
 #
 # Change path of the executable
 # =============================
-# If you want to change the path of the executable, please rememer
+# If you want to change the path of the executable (/usr/local/bin/smsit.py), please remember
 # to do the changes in /etc/init.d/smsit as well
 # 
 # Change path of configuration file

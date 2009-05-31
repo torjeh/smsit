@@ -17,6 +17,7 @@
 # This will install 
 # /etc/smsit.conf
 # /etc/init.d/smsit
+# /user/local/bin/smsit.py
 #
 # and make SMSit start at boot-time
 #
