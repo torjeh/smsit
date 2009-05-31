@@ -213,6 +213,19 @@ else:
    
 INFO("SMSit started " + ctime())
 
+# Some sanity checks for the variables read from config file
+if alert_treshold < 1:
+    WARNING("Alert treshold cannot be 0. Setting it to 1")
+    alert_treshold = 1
+if check_time < 0:
+    WARNING("Check time (the time to sleep between chekcs) needs to be a non-negative number. Setting it to 0.")
+    check_time=0
+if len(phone_no) is 0:
+    WARNING("No phone numbers are specified.")
+
+
+
+
 DEBUG("=======================================================")
 DEBUG("Configuration")
 DEBUG("_______________________________________________________")
