@@ -62,7 +62,6 @@ def createDaemon(redirect=None):
         REDIRECT_TO=redirect
         # Truncate the file
         open(redirect,"w")
-        
     elif (hasattr(os, "devnull")):
         REDIRECT_TO = os.devnull
     else:
@@ -226,9 +225,9 @@ if len(phone_no) is 0:
 
 
 
-DEBUG("=======================================================")
+DEBUG("================================================================")
 DEBUG("Configuration")
-DEBUG("_______________________________________________________")
+INFO("________________________________________________________________")
 DEBUG("alert_treshold: " + str(alert_treshold))
 DEBUG("check_time:     " + str(check_time))
 DEBUG("debug:          " + str(debug))
@@ -239,16 +238,18 @@ DEBUG("logfile:        " + str(logfile))
 DEBUG("pidfile:        " + str(pidfile))
 DEBUG("workingdir:     " + str(os.getcwd()))
 DEBUG("My pid:         " + str(os.getpid()))
-DEBUG("_______________________________________________________")
-
+DEBUG("________________________________________________________________")
 """ Body """
+
+
+
 
 # This method is (pretty much) stolen from 
 # http://www.wellho.net/solutions/python-python-threads-a-first-example.html
 def test_ping_hosts(hosts):
-    INFO("=======================================================")
-    INFO("ip                  alias         ")
-    INFO("_______________________________________________________")
+    INFO("================================================================")
+    INFO("ip                  alias                Response            ")
+    INFO("________________________________________________________________")
 
     t0 = time()
     lifeline = re.compile(r"(\d) received")
@@ -261,10 +262,11 @@ def test_ping_hosts(hosts):
             if not line: break 
             igot = re.findall(lifeline,line) # Parse
             if igot:
-                ipstr = h+" "*(20-len(h))
-                astr  = hosts[h].hostname+" "*(20-len(hosts[h].hostname))
-                chck_str = str(hosts[h].checks_failed) 
-                INFO(ipstr + astr + " " + report[int(igot[0])] + " " + chck_str)
+                ipstr = h+" "*(20-len(h)) # ip-address
+                astr  = hosts[h].hostname+" "*(20-len(hosts[h].hostname)) # alias
+                chck_str = str(hosts[h].checks_failed)+" "*(2-len(str(hosts[h].checks_failed)))
+                report_str = report[int(igot[0])]+" "*(20-len(report[int(igot[0])]))
+                INFO(ipstr + astr + " " + report_str + " " + chck_str)
                 # Host is down
                 if int(igot[0]) == 0: 
                     hosts[h].checks_failed += 1
@@ -275,7 +277,7 @@ def test_ping_hosts(hosts):
             #else: print "No igot ..."
     time_taken=time()-t0
     DEBUG("Spent about " + str(int(time_taken)) + " seconds pinging hosts.")
-    INFO("_______________________________________________________")
+    INFO("________________________________________________________________")
 
 # Return a list of all hosts that are down
 # (Definition of down: have not responded to 
