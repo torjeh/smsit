@@ -118,7 +118,7 @@ def write_pid_to_file(pidfile):
         WARNING("There is already a pid-file.")
         fd.close()
     except:
-        pass
+        fd.close()
 
     # Now truncate the file and write the pid
     fd=open(pidfile,"w")
@@ -136,6 +136,9 @@ def signal_handler(signum, frame):
     lf.close()
     sys.exit()
 
+# Return a string representation of the current local time.
+# E.g. May 31 18:23:19
+# We use this when writing to our log-file
 def now():
     return str(strftime("%b %d %H:%M:%S ", localtime()))
 
@@ -197,7 +200,7 @@ for h in hostlist:
     hosts[h[0]] = host_object(h[0],h[1])
 
 # Go into daemonized form
-# Also meas write output to a logfile
+# Also means write output to a logfile
 # and write our pid to the pidfile
 if daemon:
     print("Becoming a daemon ...")
@@ -242,8 +245,6 @@ DEBUG("________________________________________________________________")
 """ Body """
 
 
-
-
 # This method is (pretty much) stolen from 
 # http://www.wellho.net/solutions/python-python-threads-a-first-example.html
 def test_ping_hosts(hosts):
@@ -264,8 +265,8 @@ def test_ping_hosts(hosts):
             if igot:
                 ipstr = h+" "*(20-len(h)) # ip-address
                 astr  = hosts[h].hostname+" "*(20-len(hosts[h].hostname)) # alias
-                chck_str = str(hosts[h].checks_failed)+" "*(2-len(str(hosts[h].checks_failed)))
-                report_str = report[int(igot[0])]+" "*(20-len(report[int(igot[0])]))
+                chck_str = str(hosts[h].checks_failed)+" "*(2-len(str(hosts[h].checks_failed))) # ping-response
+                report_str = report[int(igot[0])]+" "*(20-len(report[int(igot[0])])) # Number of failed pings
                 INFO(ipstr + astr + " " + report_str + " " + chck_str)
                 # Host is down
                 if int(igot[0]) == 0: 

@@ -19,7 +19,7 @@
 # Short-Description: Starting SMSit at boot-time, and stops it at shutdown
 ### END INIT INFO
 
-PIDFILE=/var/lock/smsit.pid
+PIDFILE=/var/run/smsit.pid
 EXECUTABLE=/usr/local/bin/smsit.py
 
 case "$1" in
