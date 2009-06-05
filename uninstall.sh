@@ -8,7 +8,7 @@
 #
 
 if [ `id -u ` -ne 0 ] ; then
-    echo "This script needs to be run as root to be able to install to default installation paths."
+    echo "This script needs to be run as root to be able to uninstall from the default installation paths."
     exit 1
 fi
 
