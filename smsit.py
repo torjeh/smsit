@@ -186,7 +186,7 @@ config.read("/etc/smsit.conf") # Hardcoded config file ...
     
 # Get global variables from config file
 alert_treshold = int(config.get('global','alert_treshold')) # int
-check_time = int(config.get('global','check_time')) # int
+sleep_time = int(config.get('global','sleep_time')) # int
 debug = int(config.get('global','debug')) # int
 phone_no=config.get('global','phone_numbers').split(",") # Comma-separated list
 daemon=int(config.get('global','daemon')) # int
@@ -219,9 +219,9 @@ INFO("SMSit started " + ctime())
 if alert_treshold < 1:
     WARNING("Alert treshold cannot be 0. Setting it to 1")
     alert_treshold = 1
-if check_time < 0:
+if sleep_time < 0:
     WARNING("Check time (the time to sleep between chekcs) needs to be a non-negative number. Setting it to 0.")
-    check_time=0
+    sleep_time=0
 if len(phone_no) is 0:
     WARNING("No phone numbers are specified.")
 
@@ -232,7 +232,7 @@ DEBUG("================================================================")
 DEBUG("Configuration")
 INFO("________________________________________________________________")
 DEBUG("alert_treshold: " + str(alert_treshold))
-DEBUG("check_time:     " + str(check_time))
+DEBUG("sleep_time:     " + str(sleep_time))
 DEBUG("debug:          " + str(debug))
 DEBUG("phone_no:       " + str(phone_no))
 DEBUG("daemon:         " + str(daemon))
@@ -285,7 +285,7 @@ def test_ping_hosts(hosts):
 #  'ping' for the last number of checks. The number 
 # is specified by alert_treshold.
 # The amount of time a host has been down, depends
-# on the alert_treshold and the time between each check 'check_time'
+# on the alert_treshold and the time between each check 'sleep_time'
 def host_down(hosts, alert_treshold):
     rl = {} # return value - list of hosts that are down
     for h in hosts:
@@ -355,8 +355,8 @@ while 1:
         INFO("No new hosts are confirmed down. No need to alarm - yet")
         
     # Relax for a while
-    DEBUG("Sleeping for " + str(check_time) + " seconds.")
-    sleep(check_time)
+    DEBUG("Sleeping for " + str(sleep_time) + " seconds.")
+    sleep(sleep_time)
 
 
 
