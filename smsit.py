@@ -5,12 +5,12 @@ Check for hosts that are down.
 Report by sending SMS
 
 TODO: 
-T) Service
-T) Signal-handling
-T) Write pid to pidfile
 T) Multithreaded? :)
 T) Support more than ping?
    - dhcp,dns 
+T) Create som sort of standardized setup script?
+
+
 Torje S. Henriksen
 torje.starbo.henriksen@telemed.no
 
@@ -53,6 +53,9 @@ class host_object:
 """
 Util functions
 """
+# Create a daemon. Slightly modified version 
+# of the one fonud at:
+# http://code.activestate.com/recipes/278731/
 def createDaemon(redirect=None):
     UMASK = 0
     WORKDIR = "/"
@@ -336,10 +339,11 @@ def send_sms(msg, phone_numbers):
 Loop forever (Or until CTRL-C hopefully)
 """
 while 1:
+    # 1. Ping all hosts
     time_to_check_hosts=test_ping_hosts(hosts)
     down = host_down(hosts, alert_treshold) # Check what hosts are down
     if len(down) > 0: # hosts are down
-        # Check if there are any host in the down-list that hasn't sent an alert
+        # 2. Check if there are any host in the down-list that hasn't sent an alert
         send_alert=0
         for d in down:
             if down[d].alert_sent == 0:
@@ -349,12 +353,13 @@ while 1:
                 INFO("Alert already sent for " + down[d].hostname)
         # Only send alert if we have hosts that are down, that have not
         # already got an alert.
+        # 3. Send alert
         if send_alert:
             alert(down)         
     else: 
         INFO("No new hosts are confirmed down. No need to alarm - yet")
         
-    # Relax for a while
+    # 4. Sleep for a while
     DEBUG("Sleeping for " + str(sleep_time) + " seconds.")
     sleep(sleep_time)
 
