@@ -115,13 +115,17 @@ def print_hosts(hosts):
 # or if there is anything in it.
 # Just giving a warning ... 
 def write_pid_to_file(pidfile):
+    fd=None
+
     # Check if we already have a pidfile
     try: 
         fd=open(pidfile,"ro")
         WARNING("There is already a pid-file.")
         fd.close()
     except:
-        fd.close()
+        DEBUG("No pid-file found.")
+        if fd:
+            fd.close()
 
     # Now truncate the file and write the pid
     fd=open(pidfile,"w")
