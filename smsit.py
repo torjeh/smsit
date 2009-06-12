@@ -372,6 +372,21 @@ def send_sms(msg, phone_numbers):
             WARNING("Could not send SMS: " + str(rv) + ", but don't know what to do about it.")
         sleep(2) # sleep some, to make sure we don't overload the phone and make everything crash ... 
 
+
+""" 
+Service function: check if webserver is up
+"""
+def service_web(token="http://www.google.com/index.html"):
+    rv=os.system(wget token)
+    rv=get_real_exit_code(rv)
+    
+    if rv is 0:
+        DEBUG("Got file - service is up")
+    else:
+        WARNING("Did not get file - service down!")
+
+
+
 """
 Loop forever (Or until CTRL-C hopefully)
 """
