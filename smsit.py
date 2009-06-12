@@ -252,6 +252,39 @@ DEBUG("________________________________________________________________")
 """ Body """
 
 
+# My own implementation of a function
+# that is used to ping hosts
+def ping_hosts(hosts):
+    INFO("================================================================")
+    INFO("ip                  alias                Response            ")
+    INFO("________________________________________________________________")
+
+
+    t0 = time()
+    for h in hosts:
+        rv=os.system("ping -q -w 5 -c2 " + h, "r") # do the ping
+        rv = get_real_exit_code(rv)
+        if rv is 0:
+            status="Alive"
+            hosts[h].checks_failed = 0
+            hosts[h].alert_sent = 0
+        else:
+            hosts[h].checks_failed += 1
+            status="Dead"
+
+        ipstr = h+" "*(20-len(h)) # ip-address
+        astr  = hosts[h].hostname+" "*(20-len(hosts[h].hostname)) # alias
+        chck_str = str(hosts[h].checks_failed)+" "*(2-len(str(hosts[h].checks_failed))) # ping-response
+        
+        INFO(ipstr + astr + " " + status + " " + chck_str)
+        
+    time_taken=time()-t0
+    DEBUG("Spent about " + str(int(time_taken)) + " seconds pinging hosts.")
+    INFO("________________________________________________________________")
+
+
+
+
 # This method is (pretty much) stolen from 
 # http://www.wellho.net/solutions/python-python-threads-a-first-example.html
 def test_ping_hosts(hosts):
