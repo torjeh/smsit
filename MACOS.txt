@@ -1,0 +1,10 @@
+SMSit is not yet compatible with Mac OS X. Here is a list of some of the things that must be done to make it compatible:
+
+
+- Need some other installation procedure
+- Need to change the ping-call. Illegal option -w.
+      > -t seems to be what we want in Mac OS
+- Test gnokii for mac. Shouldn't be too much of a problem
+
+
+For now, just use a Linux machine. Debian-based makes stuff easier ... 
