@@ -377,7 +377,7 @@ def send_sms(msg, phone_numbers):
 Service function: check if webserver is up
 """
 def service_web(token="http://www.google.com/index.html"):
-    rv=os.system(wget token)
+    rv=os.system("wget token")
     rv=get_real_exit_code(rv)
     
     if rv is 0:
