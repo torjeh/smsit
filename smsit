@@ -55,8 +55,8 @@ case "$1" in
         stop_smsit 
         ;;
     restart)
-        start_smsit
         stop_smsit
+        start_smsit
         ;;
     reload)
        echo "We don't support reloding yet. Use the restart-option."
