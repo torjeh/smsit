@@ -259,10 +259,9 @@ def ping_hosts(hosts):
     INFO("ip                  alias                Response            ")
     INFO("________________________________________________________________")
 
-
     t0 = time()
     for h in hosts:
-        rv=os.system("ping -q -w 5 -c2 " + h, "r") # do the ping
+        rv=os.system("ping -q -w 5 -c2 " + h) # do the ping
         rv = get_real_exit_code(rv)
         if rv is 0:
             status="Alive"
@@ -392,7 +391,10 @@ Loop forever (Or until CTRL-C hopefully)
 """
 while 1:
     # 1. Ping all hosts
-    time_to_check_hosts=test_ping_hosts(hosts)
+    #time_to_check_hosts=test_ping_hosts(hosts)
+    time_to_check_hosts=ping_hosts(hosts)
+
+
     down = host_down(hosts, alert_treshold) # Check what hosts are down
     if len(down) > 0: # hosts are down
         # 2. Check if there are any host in the down-list that hasn't sent an alert
