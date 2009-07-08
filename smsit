@@ -22,8 +22,8 @@
 PIDFILE=/var/run/smsit.pid
 EXECUTABLE=/usr/local/bin/smsit.py
 
-case "$1" in
-    start)
+
+function start_smsit {
         # Check if we are already running
         if [ -e $PIDFILE ] ; then
             echo "SMSit already running. If you do not agree on this, please delete the pidfile: \""$PIDFILE"\", or run $0 stop to make it disappear."
@@ -33,9 +33,9 @@ case "$1" in
         echo "Starting SMSit"
         # Start
         $EXECUTABLE
+}
 
-        ;;
-    stop)
+function stop_smsit {
         # Check if we have a pid file
         if [ -e $PIDFILE ] ; then
             echo "Stopping SMSit"
@@ -45,9 +45,24 @@ case "$1" in
             echo "Can't find the pidfile \""$PIDFILE"\", so can't stop SMSit."
             echo "If SMSit is running, please stop it manually."
         fi
+}
+
+case "$1" in
+    start)
+        start_smsit
         ;;
+    stop)
+        stop_smsit 
+        ;;
+    restart)
+        start_smsit
+        stop_smsit
+        ;;
+    reload)
+       echo "We don't support reloding yet. Use the restart-option."
+       ;;
     *) 
-        echo "Usage: /etc/init.d/smsit {start|stop}"
+        echo "Usage: /etc/init.d/smsit {start|stop|restart}"
         exit 1
         ;;
 esac
