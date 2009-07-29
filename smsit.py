@@ -384,6 +384,34 @@ def service_web(token="http://www.google.com/index.html"):
     else:
         WARNING("Did not get file - service down!")
 
+"""
+Function to check if we get power through the power adapter, 
+and not running on battery. If we run on battery, there might be
+a power failure somewhere and we should report it.
+
+returns 0 for battery
+returns 1 for AC-power
+"""
+def on_ac_pwr():
+
+    # Check if we are online
+    online=int(os.system("acpi -a | grep on-line > /dev/null"))
+    if online is 0:
+        DEBUG("We are online.")
+        return 0
+
+
+    # We're not online, check if we are offline
+    offline=int(os.system("acpi -a | grep off-line > /dev/null"))
+    if offline is 0:
+        DEBUG("We are offline")
+        return 1
+
+    DEBUG("I don't what we are. Could not find online nor offline")
+    
+
+
+    
 
 
 """
