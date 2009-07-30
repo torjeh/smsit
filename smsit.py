@@ -200,6 +200,7 @@ daemon=int(config.get('global','daemon')) # int
 #gnokiiconfig=config.get('global','gnokiiconfig') # str
 logfile=config.get('global','logfile') # str
 pidfile=config.get('global','pidfile') # str
+acpi = int(config.get('global','acpi')) # int
 
 # Get hosts from the config file
 hostlist=config.items('hosts')
@@ -246,6 +247,7 @@ DEBUG("daemon:         " + str(daemon))
 #DEBUG("gnokiiconfig:   " + str(gnokiiconfig))
 DEBUG("logfile:        " + str(logfile))
 DEBUG("pidfile:        " + str(pidfile))
+DEBUG("acpi:           " + str(acpi))
 DEBUG("workingdir:     " + str(os.getcwd()))
 DEBUG("My pid:         " + str(os.getpid()))
 DEBUG("________________________________________________________________")
@@ -351,6 +353,11 @@ def alert(down):
     INFO("Sending alert. Length: "+str(len(down_str)))
     send_sms(down_str,phone_no)
 
+def acpi_alert():
+    WARNING("We are running on battery. Sending alert.")
+    s = "Lost AC-power connection. Running off the battery."
+    send_sms(s, phone_no)
+
 def get_real_exit_code(rv):
     return (rv >> 8) & 0xFF
 
@@ -371,7 +378,6 @@ def send_sms(msg, phone_numbers):
             WARNING("Could not send SMS: " + str(rv) + ", but don't know what to do about it.")
         sleep(2) # sleep some, to make sure we don't overload the phone and make everything crash ... 
 
-
 """ 
 Service function: check if webserver is up
 """
@@ -389,31 +395,26 @@ Function to check if we get power through the power adapter,
 and not running on battery. If we run on battery, there might be
 a power failure somewhere and we should report it.
 
-returns 0 for battery
 returns 1 for AC-power
+returns 0 for battery
+
 """
 def on_ac_pwr():
 
     # Check if we are online
     online=int(os.system("acpi -a | grep on-line > /dev/null"))
     if online is 0:
-        DEBUG("We are online.")
-        return 0
-
+        DEBUG("AC-power connected.")
+        return 1
 
     # We're not online, check if we are offline
     offline=int(os.system("acpi -a | grep off-line > /dev/null"))
     if offline is 0:
-        DEBUG("We are offline")
-        return 1
+        DEBUG("AC-power disconnected - running on battery!")
+        return 0
 
-    DEBUG("I don't what we are. Could not find online nor offline")
+    DEBUG("I don't know if we are connected to AC-power or running off the battery.")
     
-
-
-    
-
-
 """
 Loop forever (Or until CTRL-C hopefully)
 """
@@ -440,6 +441,11 @@ while 1:
             alert(down)         
     else: 
         INFO("No new hosts are confirmed down. No need to alarm - yet")
+
+    if acpi:
+        if on_ac_pwr() is 0:
+            acpi_alert()
+            
         
     # 4. Sleep for a while
     DEBUG("Sleeping for " + str(sleep_time) + " seconds.")
