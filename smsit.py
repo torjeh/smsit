@@ -228,7 +228,7 @@ if alert_treshold < 1:
     WARNING("Alert treshold cannot be 0. Setting it to 1")
     alert_treshold = 1
 if sleep_time < 0:
-    WARNING("Check time (the time to sleep between chekcs) needs to be a non-negative number. Setting it to 0.")
+    WARNING("Check time (the time to sleep between checks) needs to be a non-negative number. Setting it to 0.")
     sleep_time=0
 if len(phone_no) is 0:
     WARNING("No phone numbers are specified.")
@@ -368,7 +368,7 @@ def send_sms(msg, phone_numbers):
     if len(msg) > 160:
         WARNING("Message quite long")
 
-    # Do the message pass to alle phonenumbers in list
+    # Do the message pass to all phone numbers in list
     # example: echo "hi there" | gnokii --config /etc/gnokiirc --sendsm 12345678
     for p in phone_numbers:
 #rv = os.system("echo \""+msg+"\" | gnokii --config " + gnokiiconfig +" --sendsms "+str(p))
